@@ -1,0 +1,51 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Openlytic email lambda - send_email orchestration (reads app_queue rows, delivers via SES)
+
+Parameters:
+  PostgresUrl:
+    Type: String
+    Description: RDS connection string for the API Server Postgres (app_queue is the durable source of truth)
+  EmailDeliveryMode:
+    Type: String
+    Default: stub
+    AllowedValues: [ses, stub]
+    Description: 'ses = real Amazon SES, stub = log + fake MessageId (dev)'
+  DefaultFromEmail:
+    Type: String
+    Default: no-reply@openlytic.local
+  SendQueueArn:
+    Type: String
+    Description: SQS queue ARN for the send_email event source
+
+Globals:
+  Function:
+    Timeout: 60
+    MemorySize: 512
+    Runtime: nodejs22.x
+    Environment:
+      Variables:
+        POSTGRES_URL: !Ref PostgresUrl
+        EMAIL_DELIVERY_MODE: !Ref EmailDeliveryMode
+        DEFAULT_FROM_EMAIL: !Ref DefaultFromEmail
+
+Resources:
+  EmailServiceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: dist/
+      Handler: index.handler
+      Events:
+        SendQueue:
+          Type: SQS
+          Properties:
+            Queue: !Ref SendQueueArn
+            BatchSize: 10
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - SQSPollerPolicy:
+            QueueName: openlytic-send-queue
+
+Outputs:
+  EmailFunctionArn:
+    Value: !GetAtt EmailServiceFunction.Arn
