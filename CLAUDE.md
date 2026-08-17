@@ -16,7 +16,7 @@ npm run typecheck     # tsc --noEmit
 npm run build         # esbuild bundle → dist/index.js (lambda artifact, entry src/index.ts)
 ```
 
-- **CI (`.github/workflows/build.yml`):** PRs to `master`/`test`/`staging`/`release` run gitleaks + `npm ci` + lint/typecheck/build. The repo is self-contained (no `@openlytic/*` deps); `npm ci` requires `package-lock.json` to stay in sync with `package.json`.
+- **CI (`.github/workflows/build.yml`):** PRs to `master`/`test`/`staging`/`release` run gitleaks + `npm install` + lint/typecheck/build. The repo is self-contained (no `@openlytic/*` deps) and deliberately keeps `package-lock.json` out of git (gitignored), so CI uses `npm install` rather than `npm ci`.
 
 ## How it works
 
