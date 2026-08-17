@@ -16,6 +16,8 @@ npm run typecheck     # tsc --noEmit
 npm run build         # esbuild bundle → dist/index.js (lambda artifact, entry src/index.ts)
 ```
 
+- **CI (`.github/workflows/build.yml`):** PRs to `master`/`test`/`staging`/`release` run gitleaks + `npm install` + lint/typecheck/build. The repo is self-contained (no `@openlytic/*` deps) and deliberately keeps `package-lock.json` out of git (gitignored), so CI uses `npm install` rather than `npm ci`.
+
 ## How it works
 
 - **It is a lambda, mirroring `Backend.Service.Email`.** The single entry is `handler` in `src/index.ts` (deployed as a SAM function from `template.yaml`, SQS event source on the send queue; HTTP/scheduled routes are not ported). The `{ event, queue_id, params }` envelope arrives as the SQS message body; the durable `app_queue` row is the source of truth, so the handler re-reads it from Postgres (no SQS payload trust).
