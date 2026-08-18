@@ -6,6 +6,8 @@ import {
   requeueWithBackoff,
   type AppQueueRow
 } from 'src/modules/app-queue/app-queue.helper'
+import { prepareTrackedEmailBody } from 'src/modules/email-tracking/email-tracking.helper'
+import { persistTrackedLinks, upsertEmailAnalytic } from 'src/modules/email-tracking/email-tracking.service'
 import { getEmailWithRecipients, type EmailRecipientRow } from 'src/modules/email/email.helper'
 import { pool } from 'src/utils/database'
 import { env, envInt } from 'src/utils/env'
@@ -68,15 +70,35 @@ export const processSendEmailQueue = async (queue: AppQueueRow) => {
       return { status: 'completed' }
     }
 
+    const trackingEnabled = params.trackingEnabled !== false
+    const originalBodyHtml = email.body_html || ''
+    const text = email.snippet || stripHtml(originalBodyHtml)
+    let html = originalBodyHtml
+    let trackedLinks: Array<{ targetUrl: string; kind: 'click' | 'attachment'; label?: string | null }> = []
+
+    if (trackingEnabled && html) {
+      const trackedBody = prepareTrackedEmailBody({
+        bodyHtml: html,
+        payload: { id: emailId, to, cc, bcc }
+      })
+      html = trackedBody.bodyHtml
+      trackedLinks = trackedBody.trackedLinks
+    }
+
     const result = await sendEmail({
       from: getDefaultFromEmail(),
       to,
       cc,
       bcc,
       subject: email.subject || '',
-      html: email.body_html || '',
-      text: email.snippet || stripHtml(email.body_html || '')
+      html,
+      text
     })
+
+    if (trackingEnabled) {
+      await persistTrackedLinks({ emailId, orgId: email.org_id, trackedLinks })
+      await upsertEmailAnalytic({ emailId, eventType: 'sent' })
+    }
 
     await pool.query(
       `UPDATE email_recipient
@@ -95,7 +117,9 @@ export const processSendEmailQueue = async (queue: AppQueueRow) => {
 
     logger.info(`[email-service] sent email ${emailId} (queue ${queueId}) via ${result.stubbed ? 'stub' : 'SES'}`, {
       message_id: result.message_id,
-      recipient_count: allRecipients.length
+      recipient_count: allRecipients.length,
+      tracking_enabled: trackingEnabled,
+      tracked_link_count: trackedLinks.length
     })
 
     return { status: 'completed', message_id: result.message_id }
