@@ -17,6 +17,14 @@ Parameters:
   SendQueueArn:
     Type: String
     Description: SQS queue ARN for the send_email event source
+  EmailTrackingSecret:
+    Type: String
+    Default: ''
+    Description: HMAC secret for tracking tokens (must match the API server's TRACKING_SECRET)
+  EmailTrackingBaseUrl:
+    Type: String
+    Default: ''
+    Description: Public base URL the tracking endpoints are served from (API Gateway URL)
 
 Globals:
   Function:
@@ -28,6 +36,8 @@ Globals:
         POSTGRES_URL: !Ref PostgresUrl
         EMAIL_DELIVERY_MODE: !Ref EmailDeliveryMode
         DEFAULT_FROM_EMAIL: !Ref DefaultFromEmail
+        EMAIL_TRACKING_SECRET: !Ref EmailTrackingSecret
+        EMAIL_TRACKING_BASE_URL: !Ref EmailTrackingBaseUrl
 
 Resources:
   EmailServiceFunction:
@@ -41,6 +51,21 @@ Resources:
           Properties:
             Queue: !Ref SendQueueArn
             BatchSize: 10
+        TrackingOpen:
+          Type: HttpApi
+          Properties:
+            Path: /email-tracking/open
+            Method: GET
+        TrackingClick:
+          Type: HttpApi
+          Properties:
+            Path: /email-tracking/click
+            Method: GET
+        TrackingAttachmentView:
+          Type: HttpApi
+          Properties:
+            Path: /email-tracking/attachment-view
+            Method: GET
       Policies:
         - AWSLambdaBasicExecutionRole
         - SQSPollerPolicy:
