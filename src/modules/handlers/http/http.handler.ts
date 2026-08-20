@@ -1,5 +1,6 @@
 import { logger } from 'src/utils/logger'
 import {
+  ingestTransportWebhook,
   trackEmailAttachmentView,
   trackEmailClick,
   trackEmailOpen
@@ -8,6 +9,7 @@ import {
 interface HttpTrackingEvent {
   httpMethod?: string
   path?: string
+  body?: string | null
   queryStringParameters?: Record<string, string | undefined> | null
   headers?: Record<string, string | undefined>
 }
@@ -65,6 +67,12 @@ export const handler = async (event: HttpTrackingEvent) => {
         if (method !== 'GET') throw new Error('Invalid HTTP method for this endpoint')
         response = await trackEmailAttachmentView({ headers, queryParams })
         contentType = 'image/gif'
+        break
+
+      case '/email-tracking/webhook':
+        if (method !== 'POST') throw new Error('Invalid HTTP method for this endpoint')
+        response = await ingestTransportWebhook({ headers, body: event?.body })
+        contentType = 'application/json'
         break
 
       default:

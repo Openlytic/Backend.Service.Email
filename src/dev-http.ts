@@ -16,30 +16,35 @@ interface LambdaResponse {
 const port = Number(process.argv[2]) || 3001
 
 const server = http.createServer(async (req, res) => {
-  const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`)
+  const chunks: Buffer[] = []
+  req.on('data', (chunk) => chunks.push(chunk))
+  req.on('end', async () => {
+    const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`)
 
-  const event = {
-    httpMethod: req.method || 'GET',
-    path: url.pathname,
-    queryStringParameters: Object.fromEntries(url.searchParams.entries()),
-    headers: {
-      ...(req.headers as Record<string, string | undefined>),
-      'x-forwarded-for': req.headers['x-forwarded-for'] || req.socket.remoteAddress || undefined
+    const event = {
+      httpMethod: req.method || 'GET',
+      path: url.pathname,
+      body: Buffer.concat(chunks).toString('utf8'),
+      queryStringParameters: Object.fromEntries(url.searchParams.entries()),
+      headers: {
+        ...(req.headers as Record<string, string | undefined>),
+        'x-forwarded-for': req.headers['x-forwarded-for'] || req.socket.remoteAddress || undefined
+      }
     }
-  }
 
-  const response = (await handler(event)) as LambdaResponse
+    const response = (await handler(event)) as LambdaResponse
 
-  res.statusCode = response?.statusCode || 200
-  Object.entries(response?.headers || {}).forEach(([key, value]) => {
-    res.setHeader(key, value)
+    res.statusCode = response?.statusCode || 200
+    Object.entries(response?.headers || {}).forEach(([key, value]) => {
+      res.setHeader(key, value)
+    })
+
+    if (response?.isBase64Encoded) {
+      res.end(Buffer.from(response?.body || '', 'base64'))
+    } else {
+      res.end(response?.body || '')
+    }
   })
-
-  if (response?.isBase64Encoded) {
-    res.end(Buffer.from(response?.body || '', 'base64'))
-  } else {
-    res.end(response?.body || '')
-  }
 })
 
 server.listen(port, () => {
