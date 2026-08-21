@@ -1,0 +1,70 @@
+name: Prod Deploy to Amazon ECS
+
+on:
+  push:
+    tags:
+      - v*.*.*.*
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  gitleaks:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+  deploy:
+    name: Deploy
+    needs: [gitleaks]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-access-key-id: ${{ secrets.OPENLYTIC_AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.OPENLYTIC_AWS_SECRET_KEY }}
+          aws-region: ${{ secrets.OPENLYTIC_AWS_REGION }}
+
+      - name: Create .npmrc file for custom package
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > .npmrc
+          echo "@openlytic:registry=https://registry.npmjs.org/" >> .npmrc
+
+      - uses: ksivamuthu/aws-copilot-github-action@v0.0.8
+        with:
+          command: install
+      - run: |
+          copilot --version
+      - run: |
+          copilot svc deploy --name prod-email --env prod
+
+  notification:
+    name: Notification
+    if: ${{ failure() }}
+    needs: [gitleaks, deploy]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify dedicated slack channel
+        uses: craftech-io/slack-action@v1
+        with:
+          github-token: ${{ github.token }}
+          slack-webhook-uri: ${{ secrets.SLACK_WEBHOOK }}
+          notification-summary: Prod server deployment failed for ${{ github.ref_name }}!
+          notification-color: dc3545
+          timezone: Asia/Dhaka
