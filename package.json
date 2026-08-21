@@ -11,7 +11,9 @@
     "lint-fix": "eslint --quiet . --fix --ignore-pattern build/ --ignore-pattern dist/",
     "format": "prettier . --write",
     "invoke": "tsx src/invoke.ts",
-    "build": "esbuild src/index.ts --bundle --platform=node --target=node20 --outfile=dist/index.js"
+    "build": "esbuild src/index.ts --bundle --platform=node --target=node20 --outfile=dist/index.js",
+    "pre-commit": "lint-staged --allow-empty",
+    "prepare": "husky"
   },
   "dependencies": {
     "@aws-sdk/client-ses": "^3.700.0",
@@ -33,7 +35,14 @@
     "prettier": "^3.3.3",
     "prettier-plugin-organize-imports": "^4.3.0",
     "tsx": "^4.19.0",
-    "typescript": "^5.5.4"
+    "typescript": "^5.5.4",
+    "husky": "^9.1.5",
+    "lint-staged": "^15.2.10"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,mjs,cjs,css,scss,json,html,graphql}": [
+      "prettier --write"
+    ]
   },
   "engines": {
     "node": ">=20"

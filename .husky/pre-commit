@@ -1,0 +1,30 @@
+# + This script is used to check lint errors before committing to the local repository.
+
+#!/usr/bin/env sh
+
+# - imports
+. "$(dirname -- "$0")/lib/package-manager"
+
+# - construct command
+LINT_COMMAND="$PACKAGE_MANAGER run lint"
+FORMAT_STAGED_COMMAND="$PACKAGE_MANAGER run pre-commit"
+
+# - log if ran from terminal
+if [ -t 1 ]; then
+  echo "\n\n${BLUE}Running predefined task(s) from${RESET} ${YELLOW}$(basename "$0")${RESET} ${BLUE}hook. Courtesy: ${RESET} https://linkedin.com/in/md-zihadd."
+
+  # log command
+  echo "\n${BLUE}$LINT_COMMAND${RESET}"
+fi
+
+# - run command
+$LINT_COMMAND
+
+# - log if ran from terminal
+if [ -t 1 ]; then
+  # log command
+  echo "\n${BLUE}$FORMAT_STAGED_COMMAND${RESET}"
+fi
+
+# - run command
+$FORMAT_STAGED_COMMAND

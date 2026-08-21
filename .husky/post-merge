@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+# + Refreshes the Graphify graph after a merge / `git pull`, so incoming changes
+# + from others don't leave a stale graph. Safe no-op without graphify.
+
+# - no-op instantly for anyone without graphify
+command -v graphify >/dev/null 2>&1 || exit 0
+
+# - incremental, local-only rebuild (no LLM/network); detached so it never blocks the terminal
+(graphify update . >/dev/null 2>&1 &)
+
+exit 0

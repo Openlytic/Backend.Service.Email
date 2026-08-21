@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+# + Auto-updates the Graphify code knowledge graph after each commit.
+# + Safe for the whole team: if graphify is NOT installed, this hook does nothing.
+
+# - no-op instantly for anyone without graphify
+command -v graphify >/dev/null 2>&1 || exit 0
+
+# - incremental, local-only rebuild (no LLM/network); detached so it never blocks the terminal
+(graphify update . >/dev/null 2>&1 &)
+
+exit 0

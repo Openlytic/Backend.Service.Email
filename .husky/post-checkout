@@ -1,0 +1,18 @@
+# + This script is used to install dependencies after checking out a new branch.
+
+#!/usr/bin/env sh
+
+# - imports
+. "$(dirname -- "$0")/lib/package-manager"
+
+# - construct command
+INSTALL_COMMAND="$PACKAGE_MANAGER install"
+
+# - run command
+$INSTALL_COMMAND
+
+# - refresh the Graphify graph on branch switch ($3 = 1 means a branch checkout, not a file checkout)
+#   so the knowledge graph never goes stale across branches. Safe no-op without graphify.
+if [ "$3" = "1" ] && command -v graphify >/dev/null 2>&1; then
+  (graphify update . >/dev/null 2>&1 &)
+fi

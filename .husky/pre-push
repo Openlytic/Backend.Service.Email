@@ -1,0 +1,48 @@
+# + This script is used to check build errors before pushing to the remote repository.
+
+#!/usr/bin/env sh
+
+# - imports
+. "$(dirname -- "$0")/lib/package-manager"
+
+# determine the base path (parent directory of the script)
+BASE_PATH=$(dirname -- "$0")/..
+# determine the current environment from NODE_ENV, default to 'development'
+ENV=${NODE_ENV:-development}
+# list of env files to load, in order of precedence
+ENV_FILES="$BASE_PATH/.env $BASE_PATH/.env.$ENV $BASE_PATH/.env.local"
+# initialize variable to track the source of BUILD_ON_PRE_PUSH
+BUILD_ON_PRE_PUSH_SOURCE=""
+
+# - read only the BUILD_ON_PRE_PUSH flag from each env file (never shell-source
+#   the files: values with spaces are not shell-safe).
+for file in $ENV_FILES; do
+  if [ -f "$file" ] && grep -q "^BUILD_ON_PRE_PUSH=" "$file"; then
+    BUILD_ON_PRE_PUSH=$(grep "^BUILD_ON_PRE_PUSH=" "$file" | head -n1 | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+    BUILD_ON_PRE_PUSH_SOURCE="$file"
+  fi
+done
+
+# - construct command
+BUILD_COMMAND="$PACKAGE_MANAGER run build"
+
+# - check BUILD_ON_PRE_PUSH flag
+if [ "$BUILD_ON_PRE_PUSH" = "false" ]; then
+  BUILD_FILE_NAME=$(basename "$BUILD_ON_PRE_PUSH_SOURCE")
+  echo "\n${YELLOW}Skipping '$BUILD_COMMAND' as ${BLUE}BUILD_ON_PRE_PUSH${YELLOW} is set to ${RED}false${YELLOW} in ${BLUE}$BUILD_FILE_NAME${RESET}"
+  exit 0
+fi
+
+# - log if ran from terminal
+if [ -t 1 ]; then
+  echo "\n\n${BLUE}Running predefined task(s) from${RESET} ${YELLOW}$(basename "$0")${RESET} ${BLUE}hook. Courtesy: ${RESET} https://linkedin.com/in/md-zihadd."
+
+  # log current package manager
+  echo "\n${BLUE}Current package manager:${RESET} ${YELLOW}$PACKAGE_MANAGER${RESET}"
+
+  # log command
+  echo "\n${BLUE}$BUILD_COMMAND${RESET}"
+fi
+
+# - run command
+$BUILD_COMMAND

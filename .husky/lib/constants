@@ -1,0 +1,21 @@
+# + This script is used to set colors for terminal output.
+
+# colors for terminal output
+if [ -t 1 ]; then
+  RED='\033[0;31m'
+  GREEN='\033[0;32m'
+  YELLOW='\033[0;33m'
+  BLUE='\033[0;34m'
+
+  BOLD_RED='\033[1;031m'
+  RESET='\033[0m'
+else
+# no colors for non-interactive shells (git source control in vscode)
+  RED=''
+  GREEN=''
+  YELLOW=''
+  BLUE=''
+
+  BOLD_RED=''
+  RESET=''
+fi
