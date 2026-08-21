@@ -25,6 +25,11 @@ Parameters:
     Type: String
     Default: ''
     Description: Public base URL the tracking endpoints are served from (API Gateway URL)
+  SnsWebhookSignatureVerification:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+    Description: 'Verify the SNS webhook message signature against the AWS cert (false only for offline dev/E2E)'
 
 Globals:
   Function:
@@ -38,6 +43,7 @@ Globals:
         DEFAULT_FROM_EMAIL: !Ref DefaultFromEmail
         EMAIL_TRACKING_SECRET: !Ref EmailTrackingSecret
         EMAIL_TRACKING_BASE_URL: !Ref EmailTrackingBaseUrl
+        SNS_WEBHOOK_SIGNATURE_VERIFICATION: !Ref SnsWebhookSignatureVerification
 
 Resources:
   EmailServiceFunction:
@@ -66,6 +72,11 @@ Resources:
           Properties:
             Path: /email-tracking/attachment-view
             Method: GET
+        TrackingWebhook:
+          Type: HttpApi
+          Properties:
+            Path: /email-tracking/webhook
+            Method: POST
       Policies:
         - AWSLambdaBasicExecutionRole
         - SQSPollerPolicy:
